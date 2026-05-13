@@ -283,7 +283,7 @@
 <body>
 
   <div class="header">
-    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v5</span></h1>
+    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v6</span></h1>
     <p id="subtitle">Loading icons…</p>
   </div>
 
@@ -564,7 +564,7 @@ function render() {
         <div class="icon-label">${icon.displayName}</div>
         <div class="insert-overlay">
           <button class="overlay-btn btn-insert">⬇ Insert PNG</button>
-          <button class="overlay-btn btn-svg">⎘ Copy SVG</button>
+          <button class="overlay-btn btn-svg">↓ Save SVG</button>
         </div>
       `;
       card.querySelector('.btn-insert').addEventListener('click', (e) => { e.stopPropagation(); insertIcon(icon, pathData); });
@@ -738,22 +738,21 @@ function insertIcon(icon, pathData) {
   img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
 
-// ── COPY SVG TO CLIPBOARD ────────────────────────────────────────────────────
+// ── SAVE SVG FILE ────────────────────────────────────────────────────────────
 function copySvg(icon, pathData) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
   <path d="${pathData}" fill="#1a1a1a"/>
 </svg>`;
-  navigator.clipboard.writeText(svg).then(() => {
-    showToast('✓ SVG copied — paste into PowerPoint (⌘V)', 'success');
-  }).catch(() => {
-    // Fallback for restricted contexts
-    const ta = document.createElement('textarea');
-    ta.value = svg; ta.style.position = 'fixed'; ta.style.opacity = '0';
-    document.body.appendChild(ta); ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast('✓ SVG copied — paste into PowerPoint (⌘V)', 'success');
-  });
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = icon.name + '.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✓ Saved — Insert > Pictures in PowerPoint', 'success');
 }
 
 // ── TOAST ────────────────────────────────────────────────────────────────────

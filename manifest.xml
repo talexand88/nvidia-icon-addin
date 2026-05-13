@@ -30,7 +30,7 @@
   </Hosts>
 
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://talexand88.github.io/nvidia-icon-addin/taskpane.html?v=5"/>
+    <SourceLocation DefaultValue="https://talexand88.github.io/nvidia-icon-addin/taskpane.html?v=6"/>
   </DefaultSettings>
 
   <Permissions>ReadWriteDocument</Permissions>
@@ -87,7 +87,7 @@
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://talexand88.github.io/nvidia-icon-addin"/>
         <bt:Url id="Commands.Url"            DefaultValue="https://talexand88.github.io/nvidia-icon-addin/commands.html"/>
-        <bt:Url id="Taskpane.Url"            DefaultValue="https://talexand88.github.io/nvidia-icon-addin/taskpane.html?v=5"/>
+        <bt:Url id="Taskpane.Url"            DefaultValue="https://talexand88.github.io/nvidia-icon-addin/taskpane.html?v=6"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title"      DefaultValue="NVIDIA Icon Library"/>
