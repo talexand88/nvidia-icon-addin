@@ -572,48 +572,36 @@ function insertIcon(icon, pathData) {
     return;
   }
 
-  const svgSize = 192;
-  const svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="${svgSize}" height="${svgSize}">
-  <path d="${pathData}" fill="#1a1a1a"/>
-</svg>`;
-
+  // Draw directly with Path2D — no blob URLs needed, works reliably on Mac
+  const canvasSize = 480; // high-res canvas for crisp output
   const canvas = document.createElement('canvas');
-  canvas.width = svgSize;
-  canvas.height = svgSize;
+  canvas.width = canvasSize;
+  canvas.height = canvasSize;
   const ctx = canvas.getContext('2d');
 
-  const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const img = new Image();
+  // Scale from SVG viewBox (48x48) up to canvas size
+  const scale = canvasSize / 48;
+  ctx.save();
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fill(new Path2D(pathData));
+  ctx.restore();
 
-  img.onload = () => {
-    ctx.clearRect(0, 0, svgSize, svgSize);
-    ctx.drawImage(img, 0, 0);
-    URL.revokeObjectURL(url);
+  const base64 = canvas.toDataURL('image/png').split(',')[1];
 
-    const base64 = canvas.toDataURL('image/png').split(',')[1];
-
-    Office.context.document.setSelectedDataAsync(base64, {
-      coercionType: Office.CoercionType.Image,
-      imageLeft: 0.5,
-      imageTop: 0.5,
-      imageWidth: 1.5,
-      imageHeight: 1.5
-    }, result => {
+  Office.context.document.setSelectedDataAsync(base64, {
+    coercionType: Office.CoercionType.Image,
+    imageLeft: 1,
+    imageTop: 1,
+    imageWidth: 2,
+    imageHeight: 2
+  }, result => {
       if (result.status === Office.AsyncResultStatus.Succeeded) {
         showToast('✓ ' + icon.displayName + ' inserted', 'success');
       } else {
         showToast('Insert failed: ' + result.error.message, 'error');
       }
     });
-  };
-
-  img.onerror = () => {
-    URL.revokeObjectURL(url);
-    showToast('Failed to render icon', 'error');
-  };
-
-  img.src = url;
 }
 
 // ── TOAST ────────────────────────────────────────────────────────────────────
