@@ -217,21 +217,32 @@
     .insert-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(118,185,0,0.92);
+      background: rgba(118,185,0,0.95);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 4px;
       opacity: 0;
       transition: opacity 0.15s;
       border-radius: 6px;
     }
     .icon-card:hover .insert-overlay { opacity: 1; }
-    .insert-overlay span {
+    .overlay-btn {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.5);
       color: #fff;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 80%;
+      text-align: center;
+      transition: background 0.1s;
     }
+    .overlay-btn:hover { background: rgba(255,255,255,0.35); }
 
     /* Empty state */
     .empty-state {
@@ -272,7 +283,7 @@
 <body>
 
   <div class="header">
-    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v4</span></h1>
+    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v5</span></h1>
     <p id="subtitle">Loading icons…</p>
   </div>
 
@@ -551,9 +562,13 @@ function render() {
       card.innerHTML = `
         <div class="icon-svg-wrap">${makeSVG(pathData, iconSize)}</div>
         <div class="icon-label">${icon.displayName}</div>
-        <div class="insert-overlay"><span>INSERT</span></div>
+        <div class="insert-overlay">
+          <button class="overlay-btn btn-insert">⬇ Insert PNG</button>
+          <button class="overlay-btn btn-svg">⎘ Copy SVG</button>
+        </div>
       `;
-      card.addEventListener('click', () => insertIcon(icon, pathData));
+      card.querySelector('.btn-insert').addEventListener('click', (e) => { e.stopPropagation(); insertIcon(icon, pathData); });
+      card.querySelector('.btn-svg').addEventListener('click', (e) => { e.stopPropagation(); copySvg(icon, pathData); });
       fragment.appendChild(card);
     });
     grid.appendChild(fragment);
@@ -679,23 +694,66 @@ function buildOoxmlSlide(pathData, sizeIn) {
   return `<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id="2" name="Icon"/><p:cNvSpPr><a:spLocks noChangeArrowheads="1"/></p:cNvSpPr><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${off}" y="${off}"/><a:ext cx="${emu}" cy="${emu}"/></a:xfrm><a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="l" t="t" r="r" b="b"/><a:pathLst><a:path w="48000" h="48000">${pathXml}</a:path></a:pathLst></a:custGeom><a:solidFill><a:srgbClr val="1a1a1a"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp></p:spTree></p:cSld></p:sld>`;
 }
 
-// ── INSERT INTO SLIDE ────────────────────────────────────────────────────────
+// ── INSERT AS PNG ────────────────────────────────────────────────────────────
 function insertIcon(icon, pathData) {
   if (!officeReady) { showToast('Office not ready yet…', 'error'); return; }
-  try {
-    const ooxml = buildOoxmlSlide(pathData, 2);
-    Office.context.document.setSelectedDataAsync(ooxml, {
-      coercionType: Office.CoercionType.Ooxml
-    }, result => {
-      if (result.status === Office.AsyncResultStatus.Succeeded) {
-        showToast('✓ ' + icon.displayName + ' inserted', 'success');
+
+  const SIZE = 500;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE; canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+
+  function doInsert() {
+    const base64 = canvas.toDataURL('image/png').split(',')[1];
+    Office.context.document.setSelectedDataAsync(base64, {
+      coercionType: Office.CoercionType.Image,
+      imageLeft: 1, imageTop: 1, imageWidth: 2, imageHeight: 2
+    }, r => {
+      if (r.status === Office.AsyncResultStatus.Succeeded) {
+        showToast('✓ ' + icon.displayName + ' inserted as PNG', 'success');
       } else {
-        showToast('Insert failed: ' + result.error.message, 'error');
+        showToast('Insert failed: ' + r.error.message, 'error');
       }
     });
-  } catch(e) {
-    showToast('Error: ' + e.message, 'error');
   }
+
+  // Try Path2D render (fast, no network)
+  try {
+    ctx.save();
+    ctx.scale(SIZE / 48, SIZE / 48);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fill(new Path2D(pathData));
+    ctx.restore();
+    // Check canvas actually has pixels
+    const data = ctx.getImageData(0, 0, SIZE, SIZE).data;
+    if (data.some(v => v > 0)) { doInsert(); return; }
+  } catch(e) {}
+
+  // Fallback: render via SVG data URI
+  ctx.clearRect(0, 0, SIZE, SIZE);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="${SIZE}" height="${SIZE}"><path d="${pathData}" fill="#1a1a1a"/></svg>`;
+  const img = new Image();
+  img.onload = () => { ctx.drawImage(img, 0, 0); doInsert(); };
+  img.onerror = () => showToast('Failed to render icon', 'error');
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+}
+
+// ── COPY SVG TO CLIPBOARD ────────────────────────────────────────────────────
+function copySvg(icon, pathData) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <path d="${pathData}" fill="#1a1a1a"/>
+</svg>`;
+  navigator.clipboard.writeText(svg).then(() => {
+    showToast('✓ SVG copied — paste into PowerPoint (⌘V)', 'success');
+  }).catch(() => {
+    // Fallback for restricted contexts
+    const ta = document.createElement('textarea');
+    ta.value = svg; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✓ SVG copied — paste into PowerPoint (⌘V)', 'success');
+  });
 }
 
 // ── TOAST ────────────────────────────────────────────────────────────────────
