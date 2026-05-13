@@ -565,43 +565,134 @@ function render() {
   clearBtn.style.display = (searchQuery || selectedCategory !== 'all') ? 'inline' : 'none';
 }
 
+// ── SVG PATH → OOXML CONVERTER ───────────────────────────────────────────────
+// Converts SVG path 'd' attribute into PowerPoint OOXML custom geometry XML.
+// The result is a true vector shape: resizable, recolorable in PowerPoint.
+
+function tokenizePath(d) {
+  const re = /([MmLlHhVvCcSsQqTtAaZz])|([+-]?(?:\d*\.?\d+|\d+\.?\d*)(?:[eE][+-]?\d+)?)/g;
+  const out = []; let m;
+  while ((m = re.exec(d)) !== null) out.push(m[1] !== undefined ? m[1] : parseFloat(m[2]));
+  return out;
+}
+
+function arcToSegs(x1, y1, rx, ry, xDeg, la, sw, x2, y2) {
+  if (x1===x2 && y1===y2) return [];
+  if (!rx || !ry) return [{cp1:{x:x2,y:y2},cp2:{x:x2,y:y2},end:{x:x2,y:y2}}];
+  const phi = xDeg*Math.PI/180, cp=Math.cos(phi), sp=Math.sin(phi);
+  const dx=(x1-x2)/2, dy=(y1-y2)/2;
+  const x1p=cp*dx+sp*dy, y1p=-sp*dx+cp*dy;
+  let rx2=rx*rx, ry2=ry*ry, x1p2=x1p*x1p, y1p2=y1p*y1p;
+  const lam=Math.sqrt(x1p2/rx2+y1p2/ry2);
+  if (lam>1){rx*=lam;ry*=lam;rx2=rx*rx;ry2=ry*ry;}
+  const sq=Math.sqrt(Math.max(0,(rx2*ry2-rx2*y1p2-ry2*x1p2)/(rx2*y1p2+ry2*x1p2)));
+  const sgn=(la!==sw)?1:-1;
+  const cxp=sgn*sq*rx*y1p/ry, cyp=sgn*-sq*ry*x1p/rx;
+  const cx=cp*cxp-sp*cyp+(x1+x2)/2, cy=sp*cxp+cp*cyp+(y1+y2)/2;
+  const ux=(x1p-cxp)/rx, uy=(y1p-cyp)/ry, vx=(-x1p-cxp)/rx, vy=(-y1p-cyp)/ry;
+  let a1=Math.atan2(uy,ux), dA=Math.atan2(vy,vx)-a1;
+  if (!sw&&dA>0) dA-=2*Math.PI; if (sw&&dA<0) dA+=2*Math.PI;
+  const n=Math.max(1,Math.ceil(Math.abs(dA)/(Math.PI/2))), da=dA/n, segs=[];
+  for (let i=0;i<n;i++){
+    const a=a1+i*da, b=a1+(i+1)*da, al=4/3*Math.tan(da/4);
+    const ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b);
+    segs.push({
+      cp1:{x:cx+cp*(rx*(ca-al*sa))-sp*(ry*(sa+al*ca)), y:cy+sp*(rx*(ca-al*sa))+cp*(ry*(sa+al*ca))},
+      cp2:{x:cx+cp*(rx*(cb+al*sb))-sp*(ry*(sb-al*cb)), y:cy+sp*(rx*(cb+al*sb))+cp*(ry*(sb-al*cb))},
+      end:{x:cx+cp*rx*cb-sp*ry*sb, y:cy+sp*rx*cb+cp*ry*sb}
+    });
+  }
+  return segs;
+}
+
+function svgToOoxmlPath(d) {
+  const S=1000; // coordinate scale: SVG 48×48 → OOXML 48000×48000
+  const tok=tokenizePath(d);
+  let ti=0, xml='', x=0, y=0, sx=0, sy=0, lcp={x:0,y:0}, lc='';
+  const pt=(px,py)=>`<a:pt x="${Math.round(px*S)}" y="${Math.round(py*S)}"/>`;
+  const n=(k)=>{ const r=[];
+    while(r.length<k && ti<tok.length && typeof tok[ti]==='number') r.push(tok[ti++]);
+    return r; };
+
+  while (ti<tok.length) {
+    const c=tok[ti++]; if (typeof c!=='string') continue;
+    do {
+      if (c==='M'||c==='m') {
+        const [dx,dy]=n(2);
+        if(c==='M'){x=dx;y=dy;}else{x+=dx;y+=dy;}
+        sx=x;sy=y; xml+=`<a:moveTo>${pt(x,y)}</a:moveTo>`;
+      } else if (c==='L'||c==='l') {
+        const [dx,dy]=n(2);
+        if(c==='L'){x=dx;y=dy;}else{x+=dx;y+=dy;}
+        xml+=`<a:lnTo>${pt(x,y)}</a:lnTo>`;
+      } else if (c==='H'||c==='h') {
+        const [v]=n(1); x=(c==='H')?v:x+v; xml+=`<a:lnTo>${pt(x,y)}</a:lnTo>`;
+      } else if (c==='V'||c==='v') {
+        const [v]=n(1); y=(c==='V')?v:y+v; xml+=`<a:lnTo>${pt(x,y)}</a:lnTo>`;
+      } else if (c==='C'||c==='c') {
+        const r=n(6);
+        const [x1,y1,x2,y2,ex,ey]=(c==='C')?r:[x+r[0],y+r[1],x+r[2],y+r[3],x+r[4],y+r[5]];
+        xml+=`<a:cubicBezTo>${pt(x1,y1)}${pt(x2,y2)}${pt(ex,ey)}</a:cubicBezTo>`;
+        lcp={x:x2,y:y2}; x=ex; y=ey;
+      } else if (c==='S'||c==='s') {
+        const r=n(4);
+        const [x2,y2,ex,ey]=(c==='S')?r:[x+r[0],y+r[1],x+r[2],y+r[3]];
+        const x1='CScs'.includes(lc)?2*x-lcp.x:x, y1='CScs'.includes(lc)?2*y-lcp.y:y;
+        xml+=`<a:cubicBezTo>${pt(x1,y1)}${pt(x2,y2)}${pt(ex,ey)}</a:cubicBezTo>`;
+        lcp={x:x2,y:y2}; x=ex; y=ey;
+      } else if (c==='Q'||c==='q') {
+        const r=n(4);
+        const [qx,qy,ex,ey]=(c==='Q')?r:[x+r[0],y+r[1],x+r[2],y+r[3]];
+        const cx1=x+2/3*(qx-x),cy1=y+2/3*(qy-y),cx2=ex+2/3*(qx-ex),cy2=ey+2/3*(qy-ey);
+        xml+=`<a:cubicBezTo>${pt(cx1,cy1)}${pt(cx2,cy2)}${pt(ex,ey)}</a:cubicBezTo>`;
+        lcp={x:qx,y:qy}; x=ex; y=ey;
+      } else if (c==='T'||c==='t') {
+        const r=n(2);
+        const [ex,ey]=(c==='T')?r:[x+r[0],y+r[1]];
+        const qx='QqTt'.includes(lc)?2*x-lcp.x:x, qy='QqTt'.includes(lc)?2*y-lcp.y:y;
+        const cx1=x+2/3*(qx-x),cy1=y+2/3*(qy-y),cx2=ex+2/3*(qx-ex),cy2=ey+2/3*(qy-ey);
+        xml+=`<a:cubicBezTo>${pt(cx1,cy1)}${pt(cx2,cy2)}${pt(ex,ey)}</a:cubicBezTo>`;
+        lcp={x:qx,y:qy}; x=ex; y=ey;
+      } else if (c==='A'||c==='a') {
+        const r=n(7);
+        const [rx,ry,xr,la,sw,nx,ny]=(c==='A')?r:[r[0],r[1],r[2],r[3],r[4],x+r[5],y+r[6]];
+        arcToSegs(x,y,rx,ry,xr,la===1,sw===1,nx,ny).forEach(s=>{
+          xml+=`<a:cubicBezTo>${pt(s.cp1.x,s.cp1.y)}${pt(s.cp2.x,s.cp2.y)}${pt(s.end.x,s.end.y)}</a:cubicBezTo>`;
+        });
+        x=nx; y=ny;
+      } else if (c==='Z'||c==='z') {
+        xml+=`<a:close/>`; x=sx; y=sy;
+      }
+      lc=c;
+    } while (ti<tok.length && typeof tok[ti]==='number');
+  }
+  return xml;
+}
+
+function buildOoxmlSlide(pathData, sizeIn) {
+  const emu = Math.round(sizeIn * 914400);
+  const off = Math.round(0.75 * 914400);
+  const pathXml = svgToOoxmlPath(pathData);
+  return `<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id="2" name="Icon"/><p:cNvSpPr><a:spLocks noChangeArrowheads="1"/></p:cNvSpPr><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${off}" y="${off}"/><a:ext cx="${emu}" cy="${emu}"/></a:xfrm><a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="l" t="t" r="r" b="b"/><a:pathLst><a:path w="48000" h="48000">${pathXml}</a:path></a:pathLst></a:custGeom><a:solidFill><a:srgbClr val="1a1a1a"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp></p:spTree></p:cSld></p:sld>`;
+}
+
 // ── INSERT INTO SLIDE ────────────────────────────────────────────────────────
 function insertIcon(icon, pathData) {
-  if (!officeReady) {
-    showToast('Office not ready yet…', 'error');
-    return;
-  }
-
-  // Draw directly with Path2D — no blob URLs needed, works reliably on Mac
-  const canvasSize = 480; // high-res canvas for crisp output
-  const canvas = document.createElement('canvas');
-  canvas.width = canvasSize;
-  canvas.height = canvasSize;
-  const ctx = canvas.getContext('2d');
-
-  // Scale from SVG viewBox (48x48) up to canvas size
-  const scale = canvasSize / 48;
-  ctx.save();
-  ctx.scale(scale, scale);
-  ctx.fillStyle = '#1a1a1a';
-  ctx.fill(new Path2D(pathData));
-  ctx.restore();
-
-  const base64 = canvas.toDataURL('image/png').split(',')[1];
-
-  Office.context.document.setSelectedDataAsync(base64, {
-    coercionType: Office.CoercionType.Image,
-    imageLeft: 1,
-    imageTop: 1,
-    imageWidth: 3,
-    imageHeight: 3
-  }, result => {
+  if (!officeReady) { showToast('Office not ready yet…', 'error'); return; }
+  try {
+    const ooxml = buildOoxmlSlide(pathData, 2);
+    Office.context.document.setSelectedDataAsync(ooxml, {
+      coercionType: Office.CoercionType.Ooxml
+    }, result => {
       if (result.status === Office.AsyncResultStatus.Succeeded) {
         showToast('✓ ' + icon.displayName + ' inserted', 'success');
       } else {
         showToast('Insert failed: ' + result.error.message, 'error');
       }
     });
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 // ── TOAST ────────────────────────────────────────────────────────────────────
