@@ -8,15 +8,15 @@
 
   <!-- Add-in Identity -->
   <Id>a1b2c3d4-e5f6-7890-abcd-ef1234567890</Id>
-  <Version>1.0.2.0</Version>
+  <Version>1.0.3.0</Version>
   <ProviderName>NVIDIA</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="NVIDIA Icon Library"/>
   <Description DefaultValue="Search and insert NVIDIA marketing icons into your presentation"/>
 
   <!-- Icons shown in the PowerPoint ribbon -->
-  <IconUrl DefaultValue="https://talexand88.github.io/nvidia-icon-addin/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://talexand88.github.io/nvidia-icon-addin/icon-64.png"/>
+  <IconUrl DefaultValue="https://talexand88.github.io/nvidia-icon-addin/icon-32.png?v=2"/>
+  <HighResolutionIconUrl DefaultValue="https://talexand88.github.io/nvidia-icon-addin/icon-64.png?v=2"/>
   <SupportUrl DefaultValue="https://talexand88.github.io/nvidia-icon-addin"/>
 
   <AppDomains>
@@ -77,9 +77,9 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://talexand88.github.io/nvidia-icon-addin/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://talexand88.github.io/nvidia-icon-addin/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://talexand88.github.io/nvidia-icon-addin/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://talexand88.github.io/nvidia-icon-addin/icon-16.png?v=2"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://talexand88.github.io/nvidia-icon-addin/icon-32.png?v=2"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://talexand88.github.io/nvidia-icon-addin/icon-80.png?v=2"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://talexand88.github.io/nvidia-icon-addin"/>
