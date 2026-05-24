@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Install NVIDIA Icon Library for PowerPoint</title>
+  <style>
+    :root {
+      --nvidia-green: #76B900;
+      --nvidia-dark: #1a1a1a;
+      --border: #e0e0e0;
+      --bg: #f8f8f8;
+      --card: #ffffff;
+      --muted: #666;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--nvidia-dark);
+      line-height: 1.55;
+      padding: 32px 16px 64px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    header .dot {
+      width: 14px; height: 14px;
+      background: var(--nvidia-green);
+      border-radius: 50%;
+    }
+    h1 { font-size: 26px; }
+    .tagline { color: var(--muted); margin-bottom: 28px; }
+
+    .download {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    .download p { color: var(--muted); margin-bottom: 12px; font-size: 14px; }
+    .btn {
+      display: inline-block;
+      background: var(--nvidia-green);
+      color: #fff;
+      font-weight: 700;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: background .15s, transform .15s;
+    }
+    .btn:hover { background: #6aa800; transform: translateY(-1px); }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+    h2 {
+      font-size: 18px;
+      margin: 28px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h2 .emoji { font-size: 22px; }
+
+    .platform {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 14px;
+    }
+    .platform ol { padding-left: 22px; }
+    .platform li { margin: 6px 0; font-size: 14px; }
+    code {
+      background: #f1f1f1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+      word-break: break-all;
+    }
+    .path-block {
+      display: block;
+      background: #f1f1f1;
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin: 6px 0;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .features {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+    }
+    .features ul { padding-left: 22px; }
+    .features li { margin: 6px 0; font-size: 14px; }
+
+    footer {
+      margin-top: 40px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+    footer a { color: var(--nvidia-green); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="dot"></div>
+      <h1>NVIDIA Icon Library for PowerPoint</h1>
+    </header>
+    <p class="tagline">Search the NVIDIA marketing icon set and insert icons directly into your slides — no copy/paste, no file hunting.</p>
+
+    <div class="download">
+      <p>Step 1 — Download the manifest file (right-click and "Save Link As…" if needed):</p>
+      <a class="btn" href="https://raw.githubusercontent.com/talexand88/nvidia-icon-addin/main/manifest.xml" download="manifest.xml">⬇ Download manifest.xml</a>
+      <p class="hint">Save it somewhere easy to find (Desktop / Downloads).</p>
+    </div>
+
+    <div class="features">
+      <strong>What you get</strong>
+      <ul>
+        <li>Search by name, category, or synonym (e.g. "ai", "cloud", "robot")</li>
+        <li>Insert as <strong>PNG</strong> (200×200 px, slide-ready)</li>
+        <li>Insert as <strong>SVG</strong> (vector — recolorable, resizable inside PowerPoint)</li>
+        <li>Works in PowerPoint for Windows, Mac, and on the web</li>
+      </ul>
+    </div>
+
+    <h2><span class="emoji">🪟</span> Windows (PowerPoint desktop)</h2>
+    <div class="platform">
+      <ol>
+        <li>Open PowerPoint.</li>
+        <li>Go to <strong>Insert</strong> → <strong>Get Add-ins</strong> (or "My Add-ins" in older versions).</li>
+        <li>Click <strong>Upload My Add-in</strong> (top-right of the dialog).</li>
+        <li>Browse to the <code>manifest.xml</code> you just downloaded → click <strong>Upload</strong>.</li>
+        <li>A new <strong>Icon Library</strong> button appears on the <strong>Home</strong> tab.</li>
+      </ol>
+    </div>
+
+    <h2><span class="emoji">🍎</span> Mac (PowerPoint desktop)</h2>
+    <div class="platform">
+      <ol>
+        <li>Fully quit PowerPoint (<strong>Cmd + Q</strong>).</li>
+        <li>In Finder, press <strong>Cmd + Shift + G</strong> and paste this path:
+          <span class="path-block">~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef</span>
+          (If the <code>wef</code> folder doesn't exist, create it.)
+        </li>
+        <li>Drop the <code>manifest.xml</code> into that folder.</li>
+        <li>Reopen PowerPoint — the <strong>Icon Library</strong> button shows up on the <strong>Home</strong> tab.</li>
+      </ol>
+    </div>
+
+    <h2><span class="emoji">🌐</span> PowerPoint on the web</h2>
+    <div class="platform">
+      <ol>
+        <li>Open any presentation at <code>powerpoint.office.com</code>.</li>
+        <li>Go to <strong>Insert</strong> → <strong>Add-ins</strong> → <strong>More Add-ins</strong> → <strong>Upload My Add-in</strong>.</li>
+        <li>Pick the <code>manifest.xml</code> file.</li>
+      </ol>
+    </div>
+
+    <footer>
+      Questions or trouble? Ping <a href="mailto:taalexander@nvidia.com">Tal Alexander</a>.
+    </footer>
+  </div>
+</body>
+</html>

@@ -283,7 +283,7 @@
 <body>
 
   <div class="header">
-    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v6</span></h1>
+    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v7</span></h1>
     <p id="subtitle">Loading icons…</p>
   </div>
 
@@ -564,7 +564,7 @@ function render() {
         <div class="icon-label">${icon.displayName}</div>
         <div class="insert-overlay">
           <button class="overlay-btn btn-insert">⬇ Insert PNG</button>
-          <button class="overlay-btn btn-svg">↓ Save SVG</button>
+          <button class="overlay-btn btn-svg">↓ Insert SVG</button>
         </div>
       `;
       card.querySelector('.btn-insert').addEventListener('click', (e) => { e.stopPropagation(); insertIcon(icon, pathData); });
@@ -698,7 +698,7 @@ function buildOoxmlSlide(pathData, sizeIn) {
 function insertIcon(icon, pathData) {
   if (!officeReady) { showToast('Office not ready yet…', 'error'); return; }
 
-  const SIZE = 500;
+  const SIZE = 200;
   const canvas = document.createElement('canvas');
   canvas.width = SIZE; canvas.height = SIZE;
   const ctx = canvas.getContext('2d');
@@ -738,21 +738,72 @@ function insertIcon(icon, pathData) {
   img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
 
-// ── SAVE SVG FILE ────────────────────────────────────────────────────────────
+// ── INSERT AS SVG ────────────────────────────────────────────────────────────
+// On Windows / PowerPoint Online: insert SVG directly onto the slide using
+// the XmlSvg coercion (modern Office). Falls back to file download on Mac
+// (and on any platform where direct insert is not supported), since Mac
+// PowerPoint's Office.js does not yet accept SVG via setSelectedDataAsync.
 function copySvg(icon, pathData) {
+  if (!officeReady) { showToast('Office not ready yet…', 'error'); return; }
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
   <path d="${pathData}" fill="#1a1a1a"/>
 </svg>`;
-  const blob = new Blob([svg], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = icon.name + '.svg';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('✓ Saved — Insert > Pictures in PowerPoint', 'success');
+
+  const platform = Office.context.platform;
+  const isWindowsLike =
+    platform === Office.PlatformType.PC ||
+    platform === Office.PlatformType.OfficeOnline;
+
+  const downloadSvgFile = () => {
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = icon.name + '.svg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✓ Saved — Insert > Pictures in PowerPoint', 'success');
+  };
+
+  if (!isWindowsLike) {
+    // Mac (and unknown platforms): fall back to file download flow
+    downloadSvgFile();
+    return;
+  }
+
+  // Windows / Online: try modern SVG coercion first
+  try {
+    Office.context.document.setSelectedDataAsync(svg, {
+      coercionType: 'xmlSvg',
+      imageLeft: 1, imageTop: 1, imageWidth: 2, imageHeight: 2
+    }, r1 => {
+      if (r1 && r1.status === Office.AsyncResultStatus.Succeeded) {
+        showToast('✓ ' + icon.displayName + ' inserted as SVG', 'success');
+        return;
+      }
+      // Second try: base64-encoded SVG via image coercion (some Windows builds)
+      try {
+        const base64 = btoa(unescape(encodeURIComponent(svg)));
+        Office.context.document.setSelectedDataAsync(base64, {
+          coercionType: Office.CoercionType.Image,
+          imageLeft: 1, imageTop: 1, imageWidth: 2, imageHeight: 2
+        }, r2 => {
+          if (r2 && r2.status === Office.AsyncResultStatus.Succeeded) {
+            showToast('✓ ' + icon.displayName + ' inserted as SVG', 'success');
+          } else {
+            downloadSvgFile();
+          }
+        });
+      } catch (e) {
+        downloadSvgFile();
+      }
+    });
+  } catch (e) {
+    downloadSvgFile();
+  }
 }
 
 // ── TOAST ────────────────────────────────────────────────────────────────────
