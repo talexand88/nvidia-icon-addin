@@ -283,7 +283,7 @@
 <body>
 
   <div class="header">
-    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v7</span></h1>
+    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v8</span></h1>
     <p id="subtitle">Loading icons…</p>
   </div>
 
@@ -705,12 +705,15 @@ function insertIcon(icon, pathData) {
 
   function doInsert() {
     const base64 = canvas.toDataURL('image/png').split(',')[1];
+    // No imageWidth/imageHeight → PowerPoint inserts the PNG at its native
+    // pixel dimensions (SIZE × SIZE), so it stays exactly 200×200 pixels
+    // instead of being resampled to fit a fixed-inch box.
     Office.context.document.setSelectedDataAsync(base64, {
       coercionType: Office.CoercionType.Image,
-      imageLeft: 1, imageTop: 1, imageWidth: 2, imageHeight: 2
+      imageLeft: 1, imageTop: 1
     }, r => {
       if (r.status === Office.AsyncResultStatus.Succeeded) {
-        showToast('✓ ' + icon.displayName + ' inserted as PNG', 'success');
+        showToast('✓ ' + icon.displayName + ' inserted (' + SIZE + '×' + SIZE + ' px)', 'success');
       } else {
         showToast('Insert failed: ' + r.error.message, 'error');
       }
