@@ -283,7 +283,7 @@
 <body>
 
   <div class="header">
-    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v10</span></h1>
+    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v11</span></h1>
     <p id="subtitle">Loading icons…</p>
   </div>
 
@@ -824,11 +824,16 @@ function copySvg(icon, pathData) {
     return;
   }
 
-  // Windows / Online: try modern SVG coercion first
+  // Windows / Online: try modern SVG coercion first.
+  // Note: imageWidth / imageHeight in Office.js are measured in POINTS
+  // (1/72 inch), not inches — so the old "2, 2" was actually 2 points,
+  // i.e. ~3 pixels, which is why the SVG was inserting absurdly small.
+  // We omit them entirely so PowerPoint uses the SVG's intrinsic
+  // width / height (200×200, as declared on the <svg> element above).
   try {
     Office.context.document.setSelectedDataAsync(svg, {
       coercionType: 'xmlSvg',
-      imageLeft: 1, imageTop: 1, imageWidth: 2, imageHeight: 2
+      imageLeft: 1, imageTop: 1
     }, r1 => {
       if (r1 && r1.status === Office.AsyncResultStatus.Succeeded) {
         showToast('✓ ' + icon.displayName + ' inserted as SVG', 'success');
@@ -839,7 +844,7 @@ function copySvg(icon, pathData) {
         const base64 = btoa(unescape(encodeURIComponent(svg)));
         Office.context.document.setSelectedDataAsync(base64, {
           coercionType: Office.CoercionType.Image,
-          imageLeft: 1, imageTop: 1, imageWidth: 2, imageHeight: 2
+          imageLeft: 1, imageTop: 1
         }, r2 => {
           if (r2 && r2.status === Office.AsyncResultStatus.Succeeded) {
             showToast('✓ ' + icon.displayName + ' inserted as SVG', 'success');

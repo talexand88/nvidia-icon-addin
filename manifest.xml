@@ -8,7 +8,7 @@
 
   <!-- Add-in Identity -->
   <Id>a1b2c3d4-e5f6-7890-abcd-ef1234567890</Id>
-  <Version>1.0.5.0</Version>
+  <Version>1.0.6.0</Version>
   <ProviderName>NVIDIA</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="NVIDIA Icon Library"/>
@@ -28,7 +28,7 @@
   </Hosts>
 
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://talexand88.github.io/nvidia-icon-addin/taskpane.html?v=10"/>
+    <SourceLocation DefaultValue="https://talexand88.github.io/nvidia-icon-addin/taskpane.html?v=11"/>
   </DefaultSettings>
 
   <Permissions>ReadWriteDocument</Permissions>
@@ -84,7 +84,7 @@
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://talexand88.github.io/nvidia-icon-addin"/>
         <bt:Url id="Commands.Url" DefaultValue="https://talexand88.github.io/nvidia-icon-addin/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://talexand88.github.io/nvidia-icon-addin/taskpane.html?v=10"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://talexand88.github.io/nvidia-icon-addin/taskpane.html?v=11"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="NVIDIA Icon Library"/>
