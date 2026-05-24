@@ -283,7 +283,7 @@
 <body>
 
   <div class="header">
-    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v8</span></h1>
+    <h1><span class="dot"></span> Icon Library <span style="font-size:10px;font-weight:400;color:#999;margin-left:4px">v10</span></h1>
     <p id="subtitle">Loading icons…</p>
   </div>
 
@@ -694,6 +694,43 @@ function buildOoxmlSlide(pathData, sizeIn) {
   return `<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id="2" name="Icon"/><p:cNvSpPr><a:spLocks noChangeArrowheads="1"/></p:cNvSpPr><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${off}" y="${off}"/><a:ext cx="${emu}" cy="${emu}"/></a:xfrm><a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="l" t="t" r="r" b="b"/><a:pathLst><a:path w="48000" h="48000">${pathXml}</a:path></a:pathLst></a:custGeom><a:solidFill><a:srgbClr val="1a1a1a"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp></p:spTree></p:cSld></p:sld>`;
 }
 
+// ── CENTERED VIEWBOX HELPER ──────────────────────────────────────────────────
+// Many of the source icons don't fill their 48×48 viewBox symmetrically — the
+// visible glyph can be drawn entirely within, say, x=4..40, y=2..46 — so when
+// we render the path inside a 200×200 square, the icon ends up offset toward
+// one side. This helper measures the path's real bounding box and returns a
+// square viewBox centered on that, with a small padding ring. Used by both
+// PNG canvas rendering and direct SVG insert so icons sit visually centered.
+function getCenteredViewBox(pathData) {
+  try {
+    const ns = 'http://www.w3.org/2000/svg';
+    const tmp = document.createElementNS(ns, 'svg');
+    tmp.setAttribute('xmlns', ns);
+    tmp.setAttribute('width', '0');
+    tmp.setAttribute('height', '0');
+    tmp.style.position = 'absolute';
+    tmp.style.left = '-9999px';
+    tmp.style.top = '-9999px';
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', pathData);
+    tmp.appendChild(p);
+    document.body.appendChild(tmp);
+    const b = p.getBBox();
+    document.body.removeChild(tmp);
+    if (!b || !isFinite(b.width) || !isFinite(b.height) || b.width <= 0 || b.height <= 0) {
+      return { x: 0, y: 0, size: 48 };
+    }
+    const dim = Math.max(b.width, b.height);
+    const pad = dim * 0.06;               // 6% breathing room on all sides
+    const totalDim = dim + 2 * pad;
+    const cx = b.x + b.width / 2;
+    const cy = b.y + b.height / 2;
+    return { x: cx - totalDim / 2, y: cy - totalDim / 2, size: totalDim };
+  } catch (e) {
+    return { x: 0, y: 0, size: 48 };
+  }
+}
+
 // ── INSERT AS PNG ────────────────────────────────────────────────────────────
 function insertIcon(icon, pathData) {
   if (!officeReady) { showToast('Office not ready yet…', 'error'); return; }
@@ -702,6 +739,8 @@ function insertIcon(icon, pathData) {
   const canvas = document.createElement('canvas');
   canvas.width = SIZE; canvas.height = SIZE;
   const ctx = canvas.getContext('2d');
+
+  const vb = getCenteredViewBox(pathData);
 
   function doInsert() {
     const base64 = canvas.toDataURL('image/png').split(',')[1];
@@ -720,10 +759,11 @@ function insertIcon(icon, pathData) {
     });
   }
 
-  // Try Path2D render (fast, no network)
+  // Try Path2D render (fast, no network) — centered using measured viewBox
   try {
     ctx.save();
-    ctx.scale(SIZE / 48, SIZE / 48);
+    ctx.scale(SIZE / vb.size, SIZE / vb.size);
+    ctx.translate(-vb.x, -vb.y);
     ctx.fillStyle = '#1a1a1a';
     ctx.fill(new Path2D(pathData));
     ctx.restore();
@@ -732,9 +772,9 @@ function insertIcon(icon, pathData) {
     if (data.some(v => v > 0)) { doInsert(); return; }
   } catch(e) {}
 
-  // Fallback: render via SVG data URI
+  // Fallback: render via SVG data URI (also using the centered viewBox)
   ctx.clearRect(0, 0, SIZE, SIZE);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="${SIZE}" height="${SIZE}"><path d="${pathData}" fill="#1a1a1a"/></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.x} ${vb.y} ${vb.size} ${vb.size}" width="${SIZE}" height="${SIZE}"><path d="${pathData}" fill="#1a1a1a"/></svg>`;
   const img = new Image();
   img.onload = () => { ctx.drawImage(img, 0, 0); doInsert(); };
   img.onerror = () => showToast('Failed to render icon', 'error');
@@ -749,7 +789,14 @@ function insertIcon(icon, pathData) {
 function copySvg(icon, pathData) {
   if (!officeReady) { showToast('Office not ready yet…', 'error'); return; }
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  // Use a large intrinsic size (200×200, matching PNG behavior). PowerPoint
+  // on Windows honors the SVG's width/height attributes when inserting via
+  // xmlSvg and ignores imageWidth/imageHeight hints — so a 48×48 SVG ends up
+  // inserted at ~half an inch on the slide. 200×200 displays at ~2 inches
+  // and (being vector) stays crisp at any later resize. The viewBox is
+  // computed from the path's real bbox so the glyph sits visually centered.
+  const vb = getCenteredViewBox(pathData);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.x} ${vb.y} ${vb.size} ${vb.size}" width="200" height="200">
   <path d="${pathData}" fill="#1a1a1a"/>
 </svg>`;
 
